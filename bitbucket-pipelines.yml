@@ -1,0 +1,49 @@
+# wazobia/helios-permissions (Laravel SDK) — Bitbucket Pipelines.
+#
+# Mirrors the Laravel SDK's CI to the permission-contract's contract
+# vector tests + the per-language unit tests + the codegen drift
+# check.
+#
+# Slim PHP images have neither git nor curl. Use the built-in PHP
+# wrappers (file_get_contents) to fetch the contract from the
+# public GitHub mirror at a pinned version.
+#
+# Tag v* → push to Packagist (or the consumer's private mirror) via
+# WAZOBIA_PACKAGIST_TOKEN repo variable.
+
+image: php:8.3-cli
+
+pipelines:
+  default:
+    - step:
+        name: install
+        script:
+          - apt-get update && apt-get install -y git unzip
+          - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          - composer install --no-interaction --prefer-dist
+    - step:
+        name: test
+        script:
+          - vendor/bin/phpunit
+    - step:
+        name: codegen
+        script:
+          # Fetch the contract from the public GitHub mirror at a
+          # pinned version, run the Node emitter, and diff against
+          # the committed files. Drift fails the build.
+          - apt-get update && apt-get install -y nodejs npm
+          - php -r "file_put_contents('/tmp/perm.json', file_get_contents('https://raw.githubusercontent.com/wazobiatech/permission-contract/v1.0.0/permissions.json'));"
+          - node ../permission-contract/scripts/codegen-php.mjs /tmp/perm.json /tmp/codegen-out
+          - diff -u src/Role.php /tmp/codegen-out/Role.php
+          - diff -u src/Permission.php /tmp/codegen-out/Permission.php
+          - diff -u src/RolePermissions.php /tmp/codegen-out/RolePermissions.php
+  tags:
+    v*:
+      - step:
+          name: publish
+          script:
+            - apt-get update && apt-get install -y git unzip
+            - curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+            - composer install --no-interaction --prefer-dist
+            - vendor/bin/phpunit
+            - echo "tag $BITBUCKET_TAG pushed; publish to Packagist is configured out of band"
