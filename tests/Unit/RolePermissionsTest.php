@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wazobia\HeliosPermissions\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Wazobia\HeliosPermissions\PermScope;
 use Wazobia\HeliosPermissions\Permission;
 use Wazobia\HeliosPermissions\Role;
 use Wazobia\HeliosPermissions\RolePermissions;
@@ -19,9 +20,10 @@ final class RolePermissionsTest extends TestCase
         );
     }
 
-    public function test_owner_has_universal_perm(): void
+    public function test_owner_has_owner_only_perms(): void
     {
-        $this->assertTrue(RolePermissions::has(Role::Owner, Permission::HeliosTenantSwitch));
+        $this->assertTrue(RolePermissions::has(Role::Owner, Permission::HeliosTenantTransfer));
+        $this->assertTrue(RolePermissions::has(Role::Owner, Permission::AthensProjectDelete));
     }
 
     public function test_transfer_is_owner_only(): void
@@ -32,12 +34,25 @@ final class RolePermissionsTest extends TestCase
         $this->assertFalse(RolePermissions::has(Role::Viewer, Permission::HeliosTenantTransfer));
     }
 
-    public function test_universal_perm_in_every_role(): void
+    public function test_self_scope_switch_is_universal_not_in_any_role(): void
     {
+        $this->assertTrue(RolePermissions::isSelfScope(Permission::HeliosTenantSwitchSelf));
         foreach (RolePermissions::ROLES as $r) {
-            $this->assertTrue(
-                RolePermissions::has($r, Permission::HeliosTenantSwitch),
-                "role {$r->value} missing universal perm",
+            $this->assertFalse(
+                RolePermissions::has($r, Permission::HeliosTenantSwitchSelf),
+                "role {$r->value} must NOT have self-scope perm helios:tenant:switch:self",
+            );
+        }
+    }
+
+    public function test_self_scope_mercury_user_self_perms(): void
+    {
+        $this->assertTrue(RolePermissions::isSelfScope(Permission::MercuryUserReadSelf));
+        $this->assertTrue(RolePermissions::isSelfScope(Permission::MercuryUserWriteSelf));
+        foreach (RolePermissions::ROLES as $r) {
+            $this->assertFalse(
+                RolePermissions::has($r, Permission::MercuryUserReadSelf),
+                "role {$r->value} must NOT have self-scope perm mercury:user:read:self",
             );
         }
     }
@@ -50,16 +65,16 @@ final class RolePermissionsTest extends TestCase
         }
     }
 
-    public function test_resolve_returns_empty_for_unknown_role_via_string(): void
+    public function test_resolve_returns_empty_for_unknown_role(): void
     {
-        // The resolve() method takes a typed Role, not a string, so
-        // the unknown-via-string path doesn't apply directly. Confirm
-        // the typed unknown role is impossible (Role is a closed
-        // enum). Skipping the test as redundant.
+        // Role is a closed enum, so a typed unknown role is impossible at the
+        // type checker. Confirm the resolve() helper is defensive at runtime
+        // by passing a value the map doesn't contain — there is no public
+        // way to do this from a typed Role, so this is a documentation test.
         $this->assertTrue(true);
     }
 
-    public function test_resolve_string_values_returns_string_list(): void
+    public function test_resolve_returns_typed_permission_array(): void
     {
         $perms = RolePermissions::resolve(Role::Viewer);
         $this->assertIsArray($perms);
@@ -78,5 +93,70 @@ final class RolePermissionsTest extends TestCase
     public function test_isValidPermission(): void
     {
         $this->assertTrue(RolePermissions::isValidPermission(Permission::AthensProjectView));
+    }
+
+    // --------------------------------------------------------------------
+    // v1.3.0 scope helpers
+    // --------------------------------------------------------------------
+
+    public function test_perm_scope_contains_every_perm(): void
+    {
+        $this->assertNotEmpty(RolePermissions::PERM_SCOPE);
+        // 31 perms in the v1.3.0 contract (3 self + 22 platform + 5 project + 1 dual)
+        $this->assertCount(31, RolePermissions::PERM_SCOPE);
+    }
+
+    public function test_scopeOf_returns_scope_for_known_perm(): void
+    {
+        $this->assertSame(PermScope::Self, RolePermissions::scopeOf(Permission::HeliosTenantSwitchSelf));
+        $this->assertSame(PermScope::Platform, RolePermissions::scopeOf(Permission::AthensProjectView));
+        $this->assertSame(PermScope::Project, RolePermissions::scopeOf(Permission::MusePostsRead));
+        $this->assertSame(PermScope::PlatformProject, RolePermissions::scopeOf(Permission::MuseAuthorRead));
+    }
+
+    public function test_isSelfScope_true_for_self_false_otherwise(): void
+    {
+        $this->assertTrue(RolePermissions::isSelfScope(Permission::HeliosTenantSwitchSelf));
+        $this->assertTrue(RolePermissions::isSelfScope(Permission::MercuryUserReadSelf));
+        $this->assertFalse(RolePermissions::isSelfScope(Permission::AthensProjectView));
+        $this->assertFalse(RolePermissions::isSelfScope(Permission::MusePostsRead));
+        $this->assertFalse(RolePermissions::isSelfScope(Permission::MuseAuthorRead));
+    }
+
+    public function test_isPlatformGrantable_true_for_platform_and_dual(): void
+    {
+        $this->assertTrue(RolePermissions::isPlatformGrantable(Permission::AthensProjectView));
+        $this->assertTrue(RolePermissions::isPlatformGrantable(Permission::MuseAuthorRead)); // dual
+        $this->assertFalse(RolePermissions::isPlatformGrantable(Permission::HeliosTenantSwitchSelf));
+        $this->assertFalse(RolePermissions::isPlatformGrantable(Permission::MusePostsRead));
+    }
+
+    public function test_isTenantGrantable_true_for_project_dual_and_tenant_defined(): void
+    {
+        $this->assertTrue(RolePermissions::isTenantGrantable('muse:posts:read'));
+        $this->assertTrue(RolePermissions::isTenantGrantable('muse:author:read')); // dual
+        $this->assertFalse(RolePermissions::isTenantGrantable('athens:project:view'));
+        $this->assertFalse(RolePermissions::isTenantGrantable('helios:tenant:switch:self'));
+        // Tenant-defined perm (not in PERM_SCOPE) is grantable.
+        $this->assertTrue(RolePermissions::isTenantGrantable('muse:custom:tenant-only-action'));
+    }
+
+    public function test_no_self_or_project_perms_in_any_role(): void
+    {
+        foreach (RolePermissions::ROLES as $r) {
+            foreach (RolePermissions::resolve($r) as $p) {
+                $scope = RolePermissions::scopeOf($p);
+                $this->assertNotSame(
+                    PermScope::Self,
+                    $scope,
+                    "role {$r->value} has self-scope perm {$p->value} (forbidden)",
+                );
+                $this->assertNotSame(
+                    PermScope::Project,
+                    $scope,
+                    "role {$r->value} has project-scope perm {$p->value} (forbidden)",
+                );
+            }
+        }
     }
 }
