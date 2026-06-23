@@ -14,6 +14,14 @@ use Wazobia\HeliosPermissions\Support\SilentLogger;
  * Go SDKs.
  *
  * Constructed by Factory::create(); do not instantiate directly.
+ *
+ * Cache TTL: the default cache has NO TTL — entries live until
+ * explicit DEL via Invalidate / InvalidateTenant (or via Helios's
+ * sync write-through on every role-changing mutation). The cache is
+ * the primary read path for callerHasPermission and we target a
+ * 90-98% hit rate; entries must outlive the request burst. Pass
+ * cache_ttl_seconds in the Factory config to opt back into a TTL.
+ * Both Helios-side and SDK-side caches must use the same TTL policy.
  */
 final class PermissionClient implements PermissionClientInterface
 {

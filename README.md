@@ -74,7 +74,7 @@ $allowed = $r->client->callerHasPermission($userId, $tenantId, Permission::Athen
 | `SIGNATURE_SHARED_SECRET` | HMAC shared secret for Helios auth | yes |
 | `PERMISSION_REDIS_URL` | Redis URL for the shared permission cache | yes |
 | `HELIOS_SOURCE_SERVICE` | `x-source-service` header (default `helios-permissions-laravel`) | no |
-| `CACHE_TTL_SECONDS` | Cache TTL (default `60`) | no |
+| `CACHE_TTL_SECONDS` | Cache TTL — defaults to `0` (no expiry; entries live until explicit DEL). Pass a positive int to opt back into a TTL. | no |
 | `HELIOS_FETCH_TIMEOUT_SECONDS` | Per-fetch timeout to Helios (default `2.0`) | no |
 | `STALE_ON_ERROR` | `1`/`true` = allow stale on Helios error; default `1` | no |
 | `HELIOS_PERMISSIONS_LOGGER` | `silent` / `console` / a `Logger` instance | no |
@@ -139,6 +139,26 @@ helios:perms:{userId}:{tenantId}    →    JSON array of permission strings
 The key shape is the cross-language contract — must match Helios's
 `permission-cache.service.ts` and the TS / Python / Go SDKs. Drift
 here would silently break every consumer.
+
+## Cache TTL policy (v0.3.0 — no expiry by default)
+
+The default cache has **no TTL**. Entries live until explicit DEL
+via `invalidate` / `invalidateTenant` (or via Helios's sync
+`writeThrough` on every role-changing mutation). The cache is the
+primary read path for `callerHasPermission` and we target a 90-98%
+hit rate; entries must outlive the request burst. Every entry is
+invalidated explicitly at the mutation site — Helios calls
+`writeThrough` / `invalidate` after every role change, and the
+internal events handlers (`athens.project.*`, `athens.service.update`,
+`mercury.user.deleted`, `helios.invitation.accepted`) invalidate the
+tenant-level cache after each event. A 60s safety-net TTL would just
+be wasted work — entries the next read would re-populate anyway.
+
+Pass `cache_ttl_seconds: <positive int>` in the Factory config to opt
+back into a TTL. **Both Helios-side and SDK-side caches must use the
+same TTL policy** — if Helios writes with one TTL and the SDK reads
+with another, the SDK's TTL wins on the next SDK-side `set` call and
+may drop entries before Helios has a chance to re-write them.
 
 ## Architecture
 

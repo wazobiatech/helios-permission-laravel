@@ -57,4 +57,26 @@ final class InMemoryPermissionCacheTest extends TestCase
         $this->assertNull($c->get('u2', 'tA'));
         $this->assertNotNull($c->get('u3', 'tB'));
     }
+
+    /**
+     * v0.3.0 — InMemoryPermissionCache has no TTL. Entries persist
+     * until explicit invalidate. Mirrors the no-TTL default the
+     * Redis cache adopts (RedisPermissionCache::DEFAULT_TTL_SECONDS = 0).
+     */
+    public function test_no_ttl_entries_persist_indefinitely(): void
+    {
+        $c = new InMemoryPermissionCache();
+        $c->set('u', 't', ['athens:project:view']);
+        // Read it back many times — no expiry.
+        for ($i = 0; $i < 5; $i++) {
+            $this->assertSame(['athens:project:view'], $c->get('u', 't'));
+        }
+    }
+
+    public function test_no_ttl_write_through_also_persistent(): void
+    {
+        $c = new InMemoryPermissionCache();
+        $c->writeThrough('u', 't', ['helios:tenant:transfer']);
+        $this->assertSame(['helios:tenant:transfer'], $c->get('u', 't'));
+    }
 }

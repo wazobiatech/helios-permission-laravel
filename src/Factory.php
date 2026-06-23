@@ -16,6 +16,11 @@ use Wazobia\HeliosPermissions\Support\SilentLogger;
  * RedisPermissionCache + PermissionClient and owns the Predis
  * connection lifecycle.
  *
+ * Cache TTL defaults to 0 (no expiry). Entries are refreshed only
+ * by explicit WriteThrough / Invalidate calls — the cache is the
+ * primary read path and we target a 90-98% hit rate. Pass
+ * `cache_ttl_seconds` in the config to opt back into a TTL.
+ *
  * Example:
  *
  *   $r = Factory::create(config('helios-permissions'));

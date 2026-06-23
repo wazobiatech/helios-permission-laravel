@@ -8,19 +8,35 @@ Status snapshot for the Laravel SDK mirror of
 Laravel SDK shipped. Mirrors the TS / Python / Go SDKs' cache-first
 `callerHasPermission` surface. Auto-discovered service provider
 binds `PermissionClientInterface` as a singleton. Codegen is wired
-against `wazobiatech/permission-contract@v1.0.0` and the CI pipeline
-fails on drift. Tag `v0.1.0` to publish.
+against `wazobiatech/permission-contract@v1.4.0` and the CI pipeline
+fails on drift. Tag `v0.3.0` to publish.
 
-## What's in v0.1.0
+## What's in v0.3.0
 
 - `PermissionClientInterface` (public surface): `callerHasPermission`, `getUserPermissions`, `explain`, `invalidate`, `invalidateTenant`, `writeThrough`.
 - `Factory::create(array $config): PermissionClientResult` wires `HeliosClient` + `RedisPermissionCache` + `PermissionClient`. Owns Predis lifecycle when given a URL; respects injected lifecycle.
 - `InMemoryPermissionCache` for tests and single-instance dev.
-- `RedisPermissionCache` (predis): key shape `helios:perms:{userId}:{tenantId}`, 60s TTL, NX on `set`, overwrite on `writeThrough`, SCAN-based `invalidateTenant`.
+- `RedisPermissionCache` (predis): key shape `helios:perms:{userId}:{tenantId}`, **no TTL by default** (Predis `set` without `EX` → PERSIST), NX on `set`, overwrite on `writeThrough`, SCAN-based `invalidateTenant`. Pass `cache_ttl_seconds=<positive int>` in the config to opt back into a TTL.
 - HMAC signing matches the TS / Python / Go SDKs and Helios's `hmac.ts` verifier: `METHOD + path + timestamp` (path WITHOUT query string).
 - `HeliosPermissionsServiceProvider` auto-discovered; binds `PermissionClientInterface` as singleton; publishes config.
 - `bin/codegen` PHP-native emitter (alternative to the Node emitter).
-- 41 tests in `tests/Unit/`; `vendor/bin/phpunit` is green.
+- 57 tests in `tests/Unit/`; `vendor/bin/phpunit` is green.
+
+### Changes from v0.2.0
+
+- **No-TTL cache default.** v0.2.0 shipped with a 60s default TTL.
+  v0.3.0 removes it. `RedisPermissionCache::DEFAULT_TTL_SECONDS = 0`
+  (matches the TS, Python, and Go SDKs at v0.5.0 / v0.5.0 / v0.2.0).
+  Entries live until explicit DEL. Rationale: the cache is the
+  primary read path for `callerHasPermission` and we target a
+  90-98% hit rate; entries must outlive the request burst. Every
+  entry is invalidated explicitly at the mutation site. Pass
+  `cache_ttl_seconds=<positive int>` to the Factory config to opt
+  back in.
+- **Permission-contract v1.4.0.** Adds `helios:external:register /
+  revoke / view` (Use case 2 — "tenant brings their own auth") and
+  `athens:team:invite / remove`. Renames `helios:tenant:switch` →
+  `helios:tenant:switch:self` with scope `self` (universal perm).
 
 ## Why this lives in its own package
 

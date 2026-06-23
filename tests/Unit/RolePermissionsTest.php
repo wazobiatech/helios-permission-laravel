@@ -102,8 +102,11 @@ final class RolePermissionsTest extends TestCase
     public function test_perm_scope_contains_every_perm(): void
     {
         $this->assertNotEmpty(RolePermissions::PERM_SCOPE);
-        // 31 perms in the v1.3.0 contract (3 self + 22 platform + 5 project + 1 dual)
-        $this->assertCount(31, RolePermissions::PERM_SCOPE);
+        // 34 perms in the v1.4.0 contract: 3 self + 25 platform
+        // (added athens:team:invite, athens:team:remove,
+        // helios:external:register, helios:external:revoke,
+        // helios:external:view) + 5 project + 1 dual
+        $this->assertCount(34, RolePermissions::PERM_SCOPE);
     }
 
     public function test_scopeOf_returns_scope_for_known_perm(): void
