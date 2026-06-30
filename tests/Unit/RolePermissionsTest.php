@@ -102,11 +102,24 @@ final class RolePermissionsTest extends TestCase
     public function test_perm_scope_contains_every_perm(): void
     {
         $this->assertNotEmpty(RolePermissions::PERM_SCOPE);
-        // 34 perms in the v1.4.0 contract: 3 self + 25 platform
-        // (added athens:team:invite, athens:team:remove,
-        // helios:external:register, helios:external:revoke,
-        // helios:external:view) + 5 project + 1 dual
-        $this->assertCount(34, RolePermissions::PERM_SCOPE);
+        // 58 perms in the v1.5.0 contract: 12 self + 40 platform +
+        // 5 project + 1 dual. v1.5.0 added 24 new Mercury perms:
+        //   mercury:user:delete:self (self)
+        //   mercury:users:batch_read (platform)
+        //   mercury:api_keys:create | revoke | read (platform; manage is OWNER-only)
+        //   mercury:service_clients:read (platform)
+        //   mercury:auth_config:read (platform)
+        //   mercury:auth_config_apple:{create,update} (platform)
+        //   mercury:auth_config_oauth:{create,update} (platform)
+        //   mercury:auth_config_forgot_password:{create,update,read} (platform)
+        //   mercury:connection:read:self (self)
+        //   mercury:connection_slack:{phrase_create,revoke}:self (self)
+        //   mercury:connection_oauth:{initiate,complete}:self (self)
+        //   mercury:connection_oauth:refresh (platform)
+        //   mercury:connection_google:revoke:self (self)
+        //   mercury:connection_imap:{create,revoke}:self (self)
+        //   mercury:events:consume (platform)
+        $this->assertCount(58, RolePermissions::PERM_SCOPE);
     }
 
     public function test_scopeOf_returns_scope_for_known_perm(): void
