@@ -8,10 +8,10 @@ Status snapshot for the Laravel SDK mirror of
 Laravel SDK shipped. Mirrors the TS / Python / Go SDKs' cache-first
 `callerHasPermission` surface. Auto-discovered service provider
 binds `PermissionClientInterface` as a singleton. Codegen is wired
-against `wazobiatech/permission-contract@v1.4.0` and the CI pipeline
-fails on drift. Tag `v0.3.0` to publish.
+against `wazobiatech/permission-contract@v1.6.0` and the CI pipeline
+fails on drift. Tag `v0.7.0` to publish.
 
-## What's in v0.3.0
+## What's in v0.7.0
 
 - `PermissionClientInterface` (public surface): `callerHasPermission`, `getUserPermissions`, `explain`, `invalidate`, `invalidateTenant`, `writeThrough`.
 - `Factory::create(array $config): PermissionClientResult` wires `HeliosClient` + `RedisPermissionCache` + `PermissionClient`. Owns Predis lifecycle when given a URL; respects injected lifecycle.
@@ -20,7 +20,39 @@ fails on drift. Tag `v0.3.0` to publish.
 - HMAC signing matches the TS / Python / Go SDKs and Helios's `hmac.ts` verifier: `METHOD + path + timestamp` (path WITHOUT query string).
 - `HeliosPermissionsServiceProvider` auto-discovered; binds `PermissionClientInterface` as singleton; publishes config.
 - `bin/codegen` PHP-native emitter (alternative to the Node emitter).
-- 57 tests in `tests/Unit/`; `vendor/bin/phpunit` is green.
+- **v0.7.0 universal-by-contract short-circuit** — `callerHasPermission` returns `true` without consulting Helios when the perm is in every role's `ROLE_PERMISSIONS` entry (or is self-scope). Mirrors the TS / Python SDK v0.7.0 behavior. Critical for root-tenant users who have no Helios membership row.
+- 62 tests in `tests/Unit/`; `vendor/bin/phpunit` is green.
+
+### Changes from v0.6.0
+
+- **Universal-by-contract short-circuit (additive behavior change).**
+  `PermissionClient::callerHasPermission` and `PermissionClient::explain`
+  now return `true` without consulting Helios (or the cache) when the
+  requested perm is universal by contract — i.e. the perm is either
+  self-scope (universal by contract invariant) or appears in every
+  role's `ROLE_PERMISSIONS` entry. `getUserPermissions` folds the
+  self-scope perms into its result so callers see a complete view
+  regardless of tenant membership.
+
+  Why this exists: Helios stores per-(user, tenant) membership rows.
+  Root-tenant users (Mercury's platform admins) and any other
+  tenantless caller have no row to look up. Without this short-circuit,
+  every `callerHasPermission` for a universal perm would resolve to
+  `not_a_member` and 403 the caller. The contract invariant is that
+  these perms do NOT depend on tenant membership — they are universal.
+  Adding a perm to all four roles is a deliberate, reviewable contract
+  decision; the SDK honors it without re-fetching.
+- **`RolePermissions::isUniversalPerm(Permission)` helper.** Codegen'd
+  from `permission-contract/permissions.json` and exposed on the
+  generated `RolePermissions` class. The Laravel PHP emitter (`bin/codegen`)
+  is kept in lockstep with the contract repo's Node emitter
+  (`permission-contract/scripts/codegen-php.mjs`).
+- **Permission-contract v1.6.0.** Adds Mercury expansion (24 new perms
+  in v1.5.0; v1.6.0 carries the same vocabulary plus scope-grouped
+  emitter ordering for stable diffs).
+- **Test fixtures regenerated.** `tests/fixtures/{Role,Permission,PermScope,RolePermissions}.php.expected`
+  updated against v1.6.0 contract. `tests/Unit/RolePermissionsTest::test_perm_scope_contains_every_perm`
+  bumped to expect 72 perms (12 self + 40 platform + 19 project + 1 dual).
 
 ### Changes from v0.2.0
 
@@ -133,7 +165,7 @@ class MyController
 
 ## Known issues
 
-- **No event-driven invalidator.** Per the plan, v1 of the Go / Laravel SDKs relies on the 60s TTL + Helios's `writeThrough`. A follow-up ticket can add a Kafka consumer if a Laravel service needs real-time event-driven invalidation.
+- **No event-driven invalidator.** Per the plan, v1 of the Go / Laravel SDKs relies on the no-TTL cache + Helios's `writeThrough`. A follow-up ticket can add a Kafka consumer if a Laravel service needs real-time event-driven invalidation.
 - **No service-tagged `CacheInterface` adapter.** A future ticket could add a PSR-16 cache abstraction; v1 uses predis directly per the user's choice.
 
 ## Future work

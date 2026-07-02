@@ -24,13 +24,14 @@ final class PermissionClientTest extends TestCase
     public function test_caller_has_permission_cache_hit(): void
     {
         $cache = new InMemoryPermissionCache();
-        $cache->set('u', 't', ['athens:project:view']);
+        $cache->set('u', 't', ['athens:project:delete']);
         $helios = $this->heliosReturning('x', ['status' => 'not_a_member'], 404);
 
-        // Pass staleOnError=false to ensure cache hit short-circuits
-        // before reaching Helios.
+        // Use athens:project:delete (OWNER-only) so the universal
+        // short-circuit does NOT fire — only the cache hit should
+        // short-circuit the lookup.
         $client = new PermissionClient($cache, $helios, false);
-        $this->assertTrue($client->callerHasPermission('u', 't', Permission::AthensProjectView));
+        $this->assertTrue($client->callerHasPermission('u', 't', Permission::AthensProjectDelete));
     }
 
     public function test_caller_has_permission_cache_miss_helios_ok(): void
@@ -39,11 +40,14 @@ final class PermissionClientTest extends TestCase
         $helios = $this->heliosReturning('x', [
             'status' => 'active',
             'role' => 'EDITOR',
-            'permissions' => ['athens:project:view'],
+            // athens:project:view is universal-by-contract (short-circuit
+            // returns true without consulting Helios). Use update as a
+            // representative non-universal perm that IS in the EDITOR set.
+            'permissions' => ['athens:project:view', 'athens:project:update'],
         ], 200);
         $client = new PermissionClient($cache, $helios);
-        $this->assertTrue($client->callerHasPermission('u', 't', Permission::AthensProjectView));
-        $this->assertSame(['athens:project:view'], $cache->get('u', 't'));
+        $this->assertTrue($client->callerHasPermission('u', 't', Permission::AthensProjectUpdate));
+        $this->assertSame(['athens:project:view', 'athens:project:update'], $cache->get('u', 't'));
     }
 
     public function test_caller_has_permission_not_member_caches_empty(): void
@@ -51,7 +55,8 @@ final class PermissionClientTest extends TestCase
         $cache = new InMemoryPermissionCache();
         $helios = $this->heliosReturning('x', ['status' => 'not_a_member'], 404);
         $client = new PermissionClient($cache, $helios);
-        $this->assertFalse($client->callerHasPermission('u', 't', Permission::AthensProjectView));
+        // athens:project:delete is OWNER-only — short-circuit does not fire.
+        $this->assertFalse($client->callerHasPermission('u', 't', Permission::AthensProjectDelete));
         $this->assertNotNull($cache->get('u', 't'));
         $this->assertSame([], $cache->get('u', 't'));
     }
@@ -59,10 +64,10 @@ final class PermissionClientTest extends TestCase
     public function test_caller_has_permission_stale_on_error_true_returns_cache(): void
     {
         $cache = new InMemoryPermissionCache();
-        $cache->set('u', 't', ['athens:project:view']);
+        $cache->set('u', 't', ['athens:project:delete']);
         $helios = $this->heliosReturning('x', ['error' => 'boom'], 500);
         $client = new PermissionClient($cache, $helios, true);
-        $this->assertTrue($client->callerHasPermission('u', 't', Permission::AthensProjectView));
+        $this->assertTrue($client->callerHasPermission('u', 't', Permission::AthensProjectDelete));
     }
 
     public function test_caller_has_permission_stale_on_error_false_propagates(): void
@@ -71,7 +76,8 @@ final class PermissionClientTest extends TestCase
         $helios = $this->heliosReturning('x', ['error' => 'boom'], 500);
         $client = new PermissionClient($cache, $helios, false);
         $this->expectException(HeliosUnreachableError::class);
-        $client->callerHasPermission('u', 't', Permission::AthensProjectView);
+        // Use a non-universal perm so the short-circuit does not bypass Helios.
+        $client->callerHasPermission('u', 't', Permission::AthensProjectDelete);
     }
 
     public function test_get_user_permissions(): void
@@ -84,8 +90,110 @@ final class PermissionClientTest extends TestCase
         ], 200);
         $client = new PermissionClient($cache, $helios);
         $perms = $client->getUserPermissions('u', 't');
-        $this->assertCount(3, $perms);
+        // v0.7.0 folds SELF_PERMISSIONS into the result, so we now see
+        // the 3 role perms + every self-scope perm. Just verify the
+        // expected presence/absence.
+        $this->assertContains('athens:project:view', $perms);
+        $this->assertContains('athens:project:update', $perms);
         $this->assertContains('helios:tenant:switch', $perms);
+        $this->assertContains('mercury:user:write:self', $perms); // self-scope (folded in)
+        $this->assertContains('mercury:user:read:self', $perms);
+        $this->assertContains('mercury:user:delete:self', $perms);
+    }
+
+    // --- v0.7.0 short-circuit tests ---------------------------------------
+
+    public function test_caller_has_permission_self_scope_short_circuits(): void
+    {
+        // self-scope perms are universal-by-contract — must return true
+        // without consulting Helios. Critical for root-tenant users.
+        $cache = new InMemoryPermissionCache();
+        $helios = $this->heliosReturning(
+            'x',
+            ['status' => 'not_a_member'],
+            404,
+        );
+        $client = new PermissionClient($cache, $helios);
+        $granted = $client->callerHasPermission(
+            'root-platform-admin',
+            'root-tenant-uuid',
+            Permission::MercuryUserWriteSelf,
+        );
+        $this->assertTrue($granted);
+        $this->assertNull($cache->get('root-platform-admin', 'root-tenant-uuid'),
+            'short-circuit must not populate cache');
+    }
+
+    public function test_caller_has_permission_universal_by_role_short_circuits(): void
+    {
+        // mercury:api_keys:read is granted to all 4 roles (OWNER+ADMIN+EDITOR+VIEWER),
+        // so the SDK short-circuits without consulting Helios.
+        $cache = new InMemoryPermissionCache();
+        $helios = $this->heliosReturning(
+            'x',
+            ['status' => 'not_a_member'],
+            404,
+        );
+        $client = new PermissionClient($cache, $helios);
+        $granted = $client->callerHasPermission(
+            'root-admin',
+            'root-tenant',
+            Permission::MercuryApi_keysRead,
+        );
+        $this->assertTrue($granted);
+    }
+
+    public function test_caller_has_permission_non_universal_still_consults_helios(): void
+    {
+        // mercury:api_keys:create is OWNER+ADMIN only. If a VIEWER asks
+        // for it, the SDK must consult Helios and return false based on
+        // the user's role.
+        $cache = new InMemoryPermissionCache();
+        $helios = $this->heliosReturning('x', [
+            'status' => 'active',
+            'role' => 'VIEWER',
+            'permissions' => ['mercury:api_keys:read'], // NOT create
+        ], 200);
+        $client = new PermissionClient($cache, $helios);
+        $this->assertFalse(
+            $client->callerHasPermission('viewer', 't1', Permission::MercuryApi_keysCreate),
+        );
+    }
+
+    public function test_explain_universal_perm_does_not_consult_helios(): void
+    {
+        $cache = new InMemoryPermissionCache();
+        $helios = $this->heliosReturning(
+            'x',
+            ['status' => 'not_a_member'],
+            404,
+        );
+        $client = new PermissionClient($cache, $helios);
+        $result = $client->explain(
+            'root-admin',
+            'root-tenant',
+            Permission::MercuryUserWriteSelf,
+        );
+        $this->assertTrue($result['allowed']);
+        $this->assertSame('granted_by_role', $result['reason']);
+    }
+
+    public function test_get_user_permissions_folds_self_scope_for_root_tenant_not_member(): void
+    {
+        // Without foldSelfPermissions, a root-tenant user (Helios returns
+        // not_a_member) would see an empty perm array. With it, they see
+        // at least the self-scope perms.
+        $cache = new InMemoryPermissionCache();
+        $helios = $this->heliosReturning(
+            'x',
+            ['status' => 'not_a_member'],
+            404,
+        );
+        $client = new PermissionClient($cache, $helios);
+        $perms = $client->getUserPermissions('root-admin', 'root-tenant');
+        $this->assertContains('mercury:user:write:self', $perms);
+        $this->assertContains('mercury:user:read:self', $perms);
+        $this->assertContains('mercury:user:delete:self', $perms);
     }
 
     public function test_explain_allowed(): void
