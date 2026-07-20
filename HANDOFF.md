@@ -8,10 +8,10 @@ Status snapshot for the Laravel SDK mirror of
 Laravel SDK shipped. Mirrors the TS / Python / Go SDKs' cache-first
 `callerHasPermission` surface. Auto-discovered service provider
 binds `PermissionClientInterface` as a singleton. Codegen is wired
-against `wazobiatech/permission-contract@v1.6.0` and the CI pipeline
-fails on drift. Tag `v0.7.0` to publish.
+against `wazobiatech/permission-contract@v1.7.0` and the CI pipeline
+fails on drift. Tag `v0.8.0` to publish.
 
-## What's in v0.7.0
+## What's in v0.8.0
 
 - `PermissionClientInterface` (public surface): `callerHasPermission`, `getUserPermissions`, `explain`, `invalidate`, `invalidateTenant`, `writeThrough`.
 - `Factory::create(array $config): PermissionClientResult` wires `HeliosClient` + `RedisPermissionCache` + `PermissionClient`. Owns Predis lifecycle when given a URL; respects injected lifecycle.
@@ -53,6 +53,20 @@ fails on drift. Tag `v0.7.0` to publish.
 - **Test fixtures regenerated.** `tests/fixtures/{Role,Permission,PermScope,RolePermissions}.php.expected`
   updated against v1.6.0 contract. `tests/Unit/RolePermissionsTest::test_perm_scope_contains_every_perm`
   bumped to expect 72 perms (12 self + 40 platform + 19 project + 1 dual).
+
+### Changes from v0.7.0
+
+- **Permission-contract v1.7.0.** Regenerates `Role.php`, `Permission.php`,
+  `PermScope.php`, `RolePermissions.php` from the v1.7.0 contract. Adds
+  17 new `muse:*` permissions (blog update/delete, author update,
+  tag/category/redirect CRUD, redirect analytics, posts:revert).
+  `muse:posts:delete` scope bumped from `project` to `platform/project`
+  so it can be granted via `role_permissions` to OWNER/ADMIN/EDITOR (the
+  muse:posts resource is platform-owned — previously project-scoped would
+  only be reachable through TenantRole). `muse:blog:delete` added to
+  `owner_only_permissions` (5 → 6 entries). No SDK behavior change —
+  purely a vocabulary bump. `tests/Unit/RolePermissionsTest::test_perm_scope_contains_every_perm`
+  bumped to expect 89 perms (12 self + 43 platform + 18 project + 16 dual).
 
 ### Changes from v0.2.0
 
