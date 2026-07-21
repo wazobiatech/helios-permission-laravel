@@ -80,4 +80,21 @@ enum Permission: string
     case MusePostsDelete = 'muse:posts:delete';
     case MusePostsRead = 'muse:posts:read';
     case MusePostsWrite = 'muse:posts:write';
+    case MusePostsRevert = 'muse:posts:revert';
+    case MuseBlogUpdate = 'muse:blog:update';
+    case MuseBlogDelete = 'muse:blog:delete';
+    case MuseAuthorUpdate = 'muse:author:update';
+    case MuseCategoryCreate = 'muse:category:create';
+    case MuseCategoryRead = 'muse:category:read';
+    case MuseCategoryUpdate = 'muse:category:update';
+    case MuseCategoryDelete = 'muse:category:delete';
+    case MuseTagCreate = 'muse:tag:create';
+    case MuseTagRead = 'muse:tag:read';
+    case MuseTagUpdate = 'muse:tag:update';
+    case MuseTagDelete = 'muse:tag:delete';
+    case MuseRedirectCreate = 'muse:redirect:create';
+    case MuseRedirectRead = 'muse:redirect:read';
+    case MuseRedirectUpdate = 'muse:redirect:update';
+    case MuseRedirectDelete = 'muse:redirect:delete';
+    case MuseRedirectAnalytics = 'muse:redirect:analytics';
 }
