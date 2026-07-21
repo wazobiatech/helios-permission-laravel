@@ -88,7 +88,7 @@ final class HeliosClient
                     'x-timestamp'      => $timestamp,
                     'Accept'           => 'application/json',
                 ])
-                ->timeout($this->fetchTimeoutSeconds)
+                ->timeout((int) $this->fetchTimeoutSeconds)
                 ->get($url);
         } catch (ConnectionException $e) {
             throw new HeliosUnreachableError(0, 'network', $e);
