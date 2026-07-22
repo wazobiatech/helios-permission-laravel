@@ -93,6 +93,8 @@ final class RolePermissions
             Permission::MuseAuthorDelete,
             Permission::MusePostsDelete,
             Permission::MusePostsRevert,
+            Permission::MusePostsRead,
+            Permission::MusePostsWrite,
             Permission::MuseTagCreate,
             Permission::MuseTagRead,
             Permission::MuseTagUpdate,
@@ -147,6 +149,8 @@ final class RolePermissions
             Permission::MuseAuthorUpdate,
             Permission::MusePostsDelete,
             Permission::MusePostsRevert,
+            Permission::MusePostsRead,
+            Permission::MusePostsWrite,
             Permission::MuseTagCreate,
             Permission::MuseTagRead,
             Permission::MuseTagUpdate,
@@ -174,6 +178,8 @@ final class RolePermissions
             Permission::MuseAuthorUpdate,
             Permission::MusePostsDelete,
             Permission::MusePostsRevert,
+            Permission::MusePostsRead,
+            Permission::MusePostsWrite,
             Permission::MuseTagCreate,
             Permission::MuseTagRead,
             Permission::MuseTagUpdate,
@@ -189,8 +195,9 @@ final class RolePermissions
             Permission::MercuryApi_keysRead,
             Permission::MercuryService_clientsRead,
             Permission::MercuryUsersRead,
-            Permission::MuseAuthorRead,
+            // Permission::MuseAuthorRead, // removed — universal perm breach
             Permission::MuseBlogRead,
+            Permission::MusePostsRead,
             Permission::MuseTagRead,
             Permission::MuseCategoryRead,
             Permission::MuseRedirectRead,
@@ -312,6 +319,22 @@ final class RolePermissions
     public static function isSelfScope(Permission $perm): bool
     {
         return self::scopeOf($perm) === PermScope::Self;
+    }
+
+    /**
+     * True if every role in ROLES grants this perm.
+     * Universal perms short-circuit callerHasPermission to true
+     * without consulting cache or Helios.
+     */
+    public static function isUniversalPerm(Permission $perm): bool
+    {
+        // Self-scope perms are universally granted.
+        if (self::isSelfScope($perm)) {
+            return true;
+        }
+        // platform, project, platform/project scoped perms MUST go through
+        // Helios for per-tenant authorization. They are never universal.
+        return false;
     }
 
     /**
