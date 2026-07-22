@@ -10,7 +10,46 @@
  * PHP 8.1 backed enums give compile-time typo protection: a perm not
  * listed here fails the type checker.
  *
- * Permission naming convention: {service}:{resource}:{action}.
+ * Permission naming convention: {service    case MercuryUsersBatchRead = "mercury:users:batch_read";
+    case MercuryApiKeysCreate = "mercury:api_keys:create";
+    case MercuryApiKeysRevoke = "mercury:api_keys:revoke";
+    case MercuryApiKeysRead = "mercury:api_keys:read";
+    case MercuryApiKeysManage = "mercury:api_keys:manage";
+    case MercuryServiceClientsRead = "mercury:service_clients:read";
+    case MercuryAuthConfigRead = "mercury:auth_config:read";
+    case MercuryAuthConfigAppleCreate = "mercury:auth_config_apple:create";
+    case MercuryAuthConfigAppleUpdate = "mercury:auth_config_apple:update";
+    case MercuryAuthConfigOauthCreate = "mercury:auth_config_oauth:create";
+    case MercuryAuthConfigOauthUpdate = "mercury:auth_config_oauth:update";
+    case MercuryAuthConfigForgotPasswordCreate = "mercury:auth_config_forgot_password:create";
+    case MercuryAuthConfigForgotPasswordUpdate = "mercury:auth_config_forgot_password:update";
+    case MercuryAuthConfigForgotPasswordRead = "mercury:auth_config_forgot_password:read";
+    case MercuryConnectionSlackPhraseCreateSelf = "mercury:connection_slack:phrase_create:self";
+    case MercuryConnectionOauthInitiateSelf = "mercury:connection_oauth:initiate:self";
+    case MercuryConnectionOauthCompleteSelf = "mercury:connection_oauth:complete:self";
+    case MercuryConnectionSlackRevokeSelf = "mercury:connection_slack:revoke:self";
+    case MercuryConnectionGoogleRevokeSelf = "mercury:connection_google:revoke:self";
+    case MercuryConnectionImapRevokeSelf = "mercury:connection_imap:revoke:self";
+    case MercuryConnectionImapCreateSelf = "mercury:connection_imap:create:self";
+    case MercuryConnectionOauthRefresh = "mercury:connection_oauth:refresh";
+    case MuseFaqCreate = "muse:faq:create";
+    case MuseFaqUpdate = "muse:faq:update";
+    case MuseFaqDelete = "muse:faq:delete";
+    case ZetaFinesView = "zeta:fines:view";
+    case ZetaFinesCreate = "zeta:fines:create";
+    case ZetaFinesPay = "zeta:fines:pay";
+    case ZetaFinesChallenge = "zeta:fines:challenge";
+    case ZetaFinesAssign = "zeta:fines:assign";
+    case ZetaFleetView = "zeta:fleet:view";
+    case ZetaFleetEdit = "zeta:fleet:edit";
+    case ZetaDriversView = "zeta:drivers:view";
+    case ZetaDriversManage = "zeta:drivers:manage";
+    case ZetaReportsView = "zeta:reports:view";
+    case ZetaBillingView = "zeta:billing:view";
+    case ZetaBillingManage = "zeta:billing:manage";
+    case ZetaTeamManage = "zeta:team:manage";
+    case ZetaTenantConfigure = "zeta:tenant:configure";
+}:{resource}:{action}.
  *   service  — one of: athens, mercury, muse, helios
  *   resource — domain noun (project, users, posts, members, ...)
  *   action   — verb (view, write, delete, manage, ...)
