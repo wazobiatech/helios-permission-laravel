@@ -302,6 +302,14 @@ final class RolePermissions
         'zeta:billing:manage' => PermScope::Project,
         'zeta:team:manage' => PermScope::Project,
         'zeta:tenant:configure' => PermScope::Project,
+        'prometheus:forms:create' => PermScope::PlatformProject,
+        'prometheus:forms:read' => PermScope::PlatformProject,
+        'prometheus:forms:update' => PermScope::PlatformProject,
+        'prometheus:forms:delete' => PermScope::PlatformProject,
+        'prometheus:responses:read' => PermScope::Platform,
+        'prometheus:responses:update' => PermScope::Platform,
+        'prometheus:responses:delete' => PermScope::Platform,
+        'prometheus:responses:analytics' => PermScope::Platform,
     ];
 
     /**

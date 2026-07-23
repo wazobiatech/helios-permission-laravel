@@ -98,4 +98,12 @@ enum Permission: string
     case ZetaBillingManage = 'zeta:billing:manage';
     case ZetaTeamManage = 'zeta:team:manage';
     case ZetaTenantConfigure = 'zeta:tenant:configure';
+    case PrometheusFormsCreate = 'prometheus:forms:create';
+    case PrometheusFormsRead = 'prometheus:forms:read';
+    case PrometheusFormsUpdate = 'prometheus:forms:update';
+    case PrometheusFormsDelete = 'prometheus:forms:delete';
+    case PrometheusResponsesRead = 'prometheus:responses:read';
+    case PrometheusResponsesUpdate = 'prometheus:responses:update';
+    case PrometheusResponsesDelete = 'prometheus:responses:delete';
+    case PrometheusResponsesAnalytics = 'prometheus:responses:analytics';
 }
