@@ -306,10 +306,10 @@ final class RolePermissions
         'prometheus:forms:read' => PermScope::PlatformProject,
         'prometheus:forms:update' => PermScope::PlatformProject,
         'prometheus:forms:delete' => PermScope::PlatformProject,
-        'prometheus:responses:read' => PermScope::Platform,
-        'prometheus:responses:update' => PermScope::Platform,
-        'prometheus:responses:delete' => PermScope::Platform,
-        'prometheus:responses:analytics' => PermScope::Platform,
+        'prometheus:responses:read' => PermScope::PlatformProject,
+        'prometheus:responses:update' => PermScope::PlatformProject,
+        'prometheus:responses:delete' => PermScope::PlatformProject,
+        'prometheus:responses:analytics' => PermScope::PlatformProject,
     ];
 
     /**
