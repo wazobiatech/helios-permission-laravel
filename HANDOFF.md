@@ -118,7 +118,7 @@ fails on drift. Tag `v0.8.0` to publish.
 | Package | Version | Why |
 |---|---|---|
 | `php` | `^8.1` | Backed enums. |
-| `predis/predis` | `^2.2` | Pure-PHP Redis client. No PECL required. |
+| `predis/predis` | `^2.2 \|\| ^3.5` | Pure-PHP Redis client. No PECL required. Widened in v0.11.3 after v0.11.2's bare `^3.5` broke consumers pinning older sibling packages (e.g. `wazobia/laravel-auth-guard`) to `predis/predis ^2.0`. |
 | `illuminate/http` | `^10\|^11\|^12` | `Http` facade for the Helios transport. |
 | `illuminate/support` | `^10\|^11\|^12` | Service provider base class. |
 | `phpunit/phpunit` | `^10.0` (dev) | Test runner. |
