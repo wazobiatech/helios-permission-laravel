@@ -124,14 +124,11 @@ final class PermissionClientTest extends TestCase
             'short-circuit must not populate cache');
     }
 
-    public function test_caller_has_permission_platform_perm_does_not_short_circuit_even_if_universal_by_role(): void
+    public function test_caller_has_permission_universal_by_role_short_circuits(): void
     {
-        // isUniversalPerm is self-scope-only (db58c55): mercury:api_keys:read
-        // is platform-scope and happens to be granted to all 4 roles, but
-        // that must NOT short-circuit — platform/project/dual perms always
-        // go through Helios so per-tenant authorization (e.g. a TenantRole
-        // restricting a dual-scope perm) is still respected. With Helios
-        // returning not_a_member, the caller must be denied.
+        // mercury:api_keys:read is granted to all 4 roles (OWNER+ADMIN+EDITOR+VIEWER),
+        // so the SDK short-circuits without consulting Helios. Matches the
+        // TS SDK's isUniversalPerm (broad: self-scope OR granted to all roles).
         $cache = new InMemoryPermissionCache();
         $helios = $this->heliosReturning(
             'x',
@@ -144,7 +141,7 @@ final class PermissionClientTest extends TestCase
             'root-tenant',
             Permission::MercuryApiKeysRead,
         );
-        $this->assertFalse($granted);
+        $this->assertTrue($granted);
     }
 
     public function test_caller_has_permission_non_universal_still_consults_helios(): void
