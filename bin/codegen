@@ -301,35 +301,19 @@ $rpLines[] = '    }';
 $rpLines[] = '';
 $rpLines[] = '    /**';
 $rpLines[] = '     * True if perm is universal-by-contract — granted to every';
-$rpLines[] = '     * authenticated caller without consulting Helios. Holds when';
-$rpLines[] = '     * either the perm is self-scope, or it appears in every role\'s';
-$rpLines[] = '     * ROLE_PERMISSIONS entry (OWNER + ADMIN + EDITOR + VIEWER).';
+$rpLines[] = '     * authenticated caller without consulting Helios. True only for';
+$rpLines[] = '     * self-scope perms.';
 $rpLines[] = '     *';
-$rpLines[] = '     * Why this exists: Helios stores per-(user, tenant) membership';
-$rpLines[] = '     * rows. Root-tenant users (Mercury\'s platform admins) and any';
-$rpLines[] = '     * other tenantless caller have no row to look up. Without this';
-$rpLines[] = '     * short-circuit, every callerHasPermission for a universal';
-$rpLines[] = '     * perm would resolve to not_a_member and 403 the caller. The';
-$rpLines[] = '     * contract invariant is that these perms do NOT depend on';
-$rpLines[] = '     * tenant membership — they are universal.';
-$rpLines[] = '     *';
-$rpLines[] = '     * The check trusts the contract: if a perm is in every role\'s';
-$rpLines[] = '     * perm array, the contract author intends every authenticated';
-$rpLines[] = '     * user to have it. Adding a perm to all four roles is a';
-$rpLines[] = '     * deliberate, reviewable contract decision — the SDK honors';
-$rpLines[] = '     * it without re-fetching.';
+$rpLines[] = '     * platform / project / platform-project perms always go through';
+$rpLines[] = '     * Helios, even if a perm happens to be granted to all 4 roles —';
+$rpLines[] = '     * per-tenant authorization must be checked per caller, since a';
+$rpLines[] = '     * tenant\'s TenantRole bundle can restrict a dual-scope perm';
+$rpLines[] = '     * independently of the platform role_permissions matrix. Only';
+$rpLines[] = '     * self-scope perms are exempt from tenant membership entirely.';
 $rpLines[] = '     */';
 $rpLines[] = '    public static function isUniversalPerm(Permission $perm): bool';
 $rpLines[] = '    {';
-$rpLines[] = '        if (self::isSelfScope($perm)) {';
-$rpLines[] = '            return true;';
-$rpLines[] = '        }';
-$rpLines[] = '        foreach (self::ROLES as $role) {';
-$rpLines[] = '            if (!in_array($perm, self::resolve($role), true)) {';
-$rpLines[] = '                return false;';
-$rpLines[] = '            }';
-$rpLines[] = '        }';
-$rpLines[] = '        return true;';
+$rpLines[] = '        return self::isSelfScope($perm);';
 $rpLines[] = '    }';
 $rpLines[] = '';
 $rpLines[] = '    /**';
@@ -404,13 +388,17 @@ function headerBlock(string $version, string $generatedAt, array $services, stri
 
 /**
  * Pascal-case a perm string. "athens:project:view" → "AthensProjectView".
- * Preserves underscores and the rest of each segment verbatim (no toLower).
+ * "mercury:auth_config_apple:create" → "MercuryAuthConfigAppleCreate" —
+ * underscore-delimited words within a segment are split and each
+ * capitalized too, not just the segment's first character.
  */
 function permCaseName(string $perm): string
 {
     $out = '';
     foreach (explode(':', $perm) as $seg) {
-        $out .= ucfirst($seg);
+        foreach (explode('_', $seg) as $word) {
+            $out .= ucfirst($word);
+        }
     }
     return $out;
 }

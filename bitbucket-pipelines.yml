@@ -32,7 +32,7 @@ pipelines:
           # pinned version, run the Node emitter, and diff against
           # the committed files. Drift fails the build.
           - apt-get update && apt-get install -y nodejs npm
-          - php -r "file_put_contents('/tmp/perm.json', file_get_contents('https://raw.githubusercontent.com/wazobiatech/permission-contract/v1.7.0/permissions.json'));"
+          - php -r "file_put_contents('/tmp/perm.json', file_get_contents('https://raw.githubusercontent.com/wazobiatech/permission-contract/v1.11.1/permissions.json'));"
           - node ../permission-contract/scripts/codegen-php.mjs /tmp/perm.json /tmp/codegen-out
           - diff -u src/Role.php /tmp/codegen-out/Role.php
           - diff -u src/Permission.php /tmp/codegen-out/Permission.php

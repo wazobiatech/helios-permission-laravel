@@ -102,24 +102,13 @@ final class RolePermissionsTest extends TestCase
     public function test_perm_scope_contains_every_perm(): void
     {
         $this->assertNotEmpty(RolePermissions::PERM_SCOPE);
-        // 89 perms in the v1.7.0 contract: 12 self + 43 platform +
-        // 18 project + 16 dual. v1.7.0 added 17 new Muse perms:
-        //   mercury:user:delete:self (self)
-        //   mercury:users:batch_read (platform)
-        //   mercury:api_keys:create | revoke | read (platform; manage is OWNER-only)
-        //   mercury:service_clients:read (platform)
-        //   mercury:auth_config:read (platform)
-        //   mercury:auth_config_apple:{create,update} (platform)
-        //   mercury:auth_config_oauth:{create,update} (platform)
-        //   mercury:auth_config_forgot_password:{create,update,read} (platform)
-        //   mercury:connection:read:self (self)
-        //   mercury:connection_slack:{phrase_create,revoke}:self (self)
-        //   mercury:connection_oauth:{initiate,complete}:self (self)
-        //   mercury:connection_oauth:refresh (platform)
-        //   mercury:connection_google:revoke:self (self)
-        //   mercury:connection_imap:{create,revoke}:self (self)
-        //   mercury:events:consume (platform)
-        $this->assertCount(89, RolePermissions::PERM_SCOPE);
+        // 100 perms in the v1.11.1 contract (internal version field: 1.11.0):
+        // 12 self + 36 platform + 18 project + 34 dual. v1.10.0 added the
+        // prometheus:* vocabulary (8 perms). v1.11.1 rescopes muse:blog:* (4
+        // perms) and prometheus:responses:* (4 perms) from platform to
+        // platform/project (dual) relative to v1.10.0 — same total count,
+        // 8 perms moved from the platform bucket to the dual bucket.
+        $this->assertCount(100, RolePermissions::PERM_SCOPE);
     }
 
     public function test_scopeOf_returns_scope_for_known_perm(): void
